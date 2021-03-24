@@ -35,6 +35,7 @@ def sentiment_review_storage(filename='labeledTrainData.tsv'):
 
     return class_list
 
+
 # Pulls data from selected hashtag and stores it in DataStore with a sentiment value of None
 def get_tweets(hashtag=input("Enter hashtag to be scraped. Must start with #: ")):
     # Keys and secrets redacted
@@ -170,6 +171,7 @@ def create_feature_vector(dictionary=None, tokens=None):
     return feature_vector_list
 
 
+# Creates a bitvector using the tweet data. No sentiment included
 def create_tweet_vector(dictionary=None, tokens=None):
     tweet_vector_list = []
 
@@ -240,5 +242,3 @@ def dict_con(dictionary, name):
 
 if __name__ == '__main__':
     train_sentiment()
-
-
