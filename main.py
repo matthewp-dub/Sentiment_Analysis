@@ -37,7 +37,7 @@ def sentiment_review_storage(filename='labeledTrainData.tsv'):
 
 
 def get_tweets(hashtag=input("Enter hashtag to be scraped. Must start with #: ")):
-    
+    # Keys and secrets redacted
     tweet_class_list = []
 
     auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
@@ -239,7 +239,6 @@ def dict_con(dictionary, name):
 
 
 if __name__ == '__main__':
-    start = time.time()
     train_sentiment()
-    stop = time.time()
-    print(f'\ntime elapsed: {stop - start}')
+
+
