@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import pickle
@@ -7,8 +8,10 @@ from keras.layers import Embedding, Conv1D, MaxPooling1D, GlobalMaxPooling1D, De
 from keras.optimizers import RMSprop
 import nltk
 import os
+import sys
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
+import tensorflow as tf
 
 
 def get_model():
@@ -24,18 +27,16 @@ def train_model(max_words=140):
     trains a model to identify tweets from scratch
     """
     # imports the training data
-    X_vector, y_vector = load_training_data()
+    X, y, t_dict = load_training_data(max_words=max_words)
+    with np.printoptions(threshold=np.inf):
+        print(X)
 
     # Does the actual machine learning. based off of:
     # https://learnremote.medium.com/sentiment-analysis-using-1d-convolutional-neural-networks-part-1-f8b6316489a2
 
     text_input_layer = Input(shape=(max_words,))
-    embedding_layer = Embedding(max_words, 50)(text_input_layer)
+    embedding_layer = Embedding(input_dim=len(t_dict) + 1, output_dim=50, input_length=max_words)(text_input_layer)
     text_layer = Conv1D(256, 3, activation='relu')(embedding_layer)
-    text_layer = MaxPooling1D(3)(text_layer)
-    text_layer = Conv1D(256, 3, activation='relu')(text_layer)
-    text_layer = MaxPooling1D(3)(text_layer)
-    text_layer = Conv1D(256, 3, activation='relu')(text_layer)
     text_layer = MaxPooling1D(3)(text_layer)
     text_layer = Conv1D(256, 3, activation='relu')(text_layer)
     text_layer = MaxPooling1D(3)(text_layer)
@@ -77,7 +78,7 @@ def train_model(max_words=140):
 
     # fits the model to training data
 
-    history = model.fit(X_vector, y_vector, epochs=50, batch_size=128, callbacks=callback_list)
+    history = model.fit(X, y, epochs=50, batch_size=128, callbacks=callback_list)
 
 
 def load_training_data(training_data_path='Twitter_training_data.csv', max_words=140):
@@ -90,9 +91,13 @@ def load_training_data(training_data_path='Twitter_training_data.csv', max_words
         with open('cache/trainingdata.pickle', 'rb') as pickle_file:
             return pickle.load(pickle_file)
 
+    # Dictionary for text/numbers
+    t_dict = {}
+    last_token_num = 1
+
     # imports training data as csv dataframe, initializes x and y vectors, removes stopwords in X vector, and assigns
     # sentiment in y vector
-    csv_dataframe = pd.read_csv(training_data_path)
+    csv_dataframe = pd.read_csv(training_data_path, nrows=50)
     raw_text = csv_dataframe['text']
     raw_sentiment = csv_dataframe['target']
 
@@ -101,22 +106,35 @@ def load_training_data(training_data_path='Twitter_training_data.csv', max_words
 
     assert len(raw_text) == len(raw_sentiment)
     vector_length = len(raw_text)
-    X_matrix = np.zeros((vector_length, max_words), dtype=object)
-    y_vector = np.zeros(vector_length)
+    X_matrix = np.zeros((vector_length, max_words), dtype=int)
+    y_vector = np.zeros(vector_length, dtype=int)
 
     for text_index, text_val in enumerate(raw_text):
         token_text = word_tokenize(text_val)
         filtered_text = [word for word in token_text if word not in stop_words]
         capped_text = filtered_text[:max_words]
+
         for token_index, token in enumerate(capped_text):
-            X_matrix[text_index, token_index] = token
+            token_num = None
+            if token in t_dict:
+                token_num = t_dict[token]
+            else:
+                t_dict[token] = last_token_num
+                token_num = last_token_num
+                last_token_num += 1
+
+            X_matrix[text_index, token_index] = token_num
 
     for sentiment_index, sentiment_val in enumerate(raw_sentiment):
         assert sentiment_val == 0 or sentiment_val == 2 or sentiment_val == 4
-        y_vector[sentiment_index] = (sentiment_val - 2) / 2
+        y_vector[sentiment_index] = float((sentiment_val - 2) / 2)
 
     # Saves pickle
     with open('cache/trainingdata.pickle', 'wb') as pickle_file:
-        pickle.dump((X_matrix, y_vector), pickle_file)
+        pickle.dump((X_matrix, y_vector, t_dict), pickle_file)
 
-    return (X_matrix, y_vector)
+    return (X_matrix, y_vector, t_dict)
+
+
+if __name__ == '__main__':
+    train_model()
